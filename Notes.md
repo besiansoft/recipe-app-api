@@ -125,3 +125,6 @@ command that runs our unit tests inside the project:
 `docker-compose` is already installed in `ubuntu-20.04` there is no need to install `docker-compose` there
 
 left it at: Configure Docker Hub Credentials
+
+**Note:**
+A Github workflow can be created locally and then once the code is pushed we should see the workflon under the `Actions` tab, the name of the workflow in Github is the same as the name of the workflow file in the codebase
