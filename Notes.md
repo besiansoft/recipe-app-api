@@ -39,6 +39,11 @@ path to folder linked to the remote repo: `~/Documents/python/recipe-app-ap `
 anything specified in the `.dockerignore` it will be ignored by Docker to minimize issues when building the container
 
 
+To create a new Django project, run the following command:
+```
+docker-compose run --rm app sh -c "django-admin startproject app ."
+```
+
 Flake 8 package is used for linting
 
 to run:
@@ -128,3 +133,8 @@ left it at: Configure Docker Hub Credentials
 
 **Note:**
 A Github workflow can be created locally and then once the code is pushed we should see the workflon under the `Actions` tab, the name of the workflow in Github is the same as the name of the workflow file in the codebase
+
+TODO: compare why the Django app has been created inside the `.app` folder and not on the `app` folder like the codebase shows
+
+left it at Test Github Actions
+
