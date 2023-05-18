@@ -6,4 +6,4 @@ exclude =
   manage.py,
   settings.py,
   .app/app/settings.py,
-    .app/app/manage.py
+  .app/app/manage.py
