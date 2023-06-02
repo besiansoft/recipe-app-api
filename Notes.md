@@ -296,3 +296,156 @@ we will be using `psycopg2` in this course
 Docker best practice:
   - Clean up build dependencies
 
+### Problem with Docker compose
+- using `depends_one` ensures `service` starts
+  - it doesn't ensure though that the application is running, it means database has started but may not be fully ready for the Django application to interact with it
+
+### Solution
+  - the solution for this is to make Django `wait for db` by creating a custom solution for this
+    - check for database availability
+    - continue when database is ready
+  - create custom Django management command
+
+### When is this an issue?
+  - Running `docker-compose` locally
+  - Running on deployed environment
+
+**Note: to create a Django app, in this case named "core"**
+```
+docker-compose run --rm app sh -c "python manage.py startapp core"
+```
+
+So basically the above command adds the template app to our project
+
+then next thing that we need to do is:
+- delete `tests.py` file inside the `core` app since we will not be using it 
+- also delete the `views.py` apps since we will not be using it either.
+- Then create a `tests` folder inside the `core` app folder
+- then create a file named `__init__.py` inside the `core/tests` folder
+- then go to `app/app/settings.py` and search for `INSTALLED_APPS` and make sure to add the core app to it at the end, so just basically adding a string named `core`
+
+### Creating a basic command to use it to wait for the database to be up and running
+
+- create a folder named `management` inside the `core` app
+- inside the folder `core/management` add an `__init__.py` file also add another folder named `commands`
+- inside the folder `/core/management/commands` add another file named `__init__.py` 
+- also inside `/core/management/commands` add a file named `wait_for_db.py`  , so beacause of this folder structure we can then run this command later on using `manage.py` 
+
+then inside the `wait_for_db.py` command add the following:
+````
+"""
+Django command to wait for the database to be available
+"""
+from django.core.management.base import BaseCommand
+
+
+class Command(BaseCommand):
+    """Django command to wait for database."""
+
+    def handle(self, *args, **options):
+        pass
+
+```
+
+this is the minimum code that we need foradding a Django management command
+
+**Important Note:***
+
+```
+@patch('core.management.commands.wait_for_db.Command.check')
+class CommandTests(SimpleTestCase):
+    """Test commands."""
+
+    def test_wait_for_db_ready(self, patched_check):
+        """Test waiting for database if database read"""
+        patched_check.return_value = True  # checks if database is ready
+
+        call_command('wait_for_db')
+
+        patched_check.assert_called_once_with(database=['default'])
+
+    @patch('time.sleep')
+    def test_wait_for_db_delay(self, patched_sleep, patched_check):
+        """Test waiting for database when getting OperationalError"""
+        patched_check.side_effect = [Psycopg2Error] * 2 + \
+            [OperationalError] * 3 + [True]
+
+        call_command('wait_for_db')
+
+        self.assertEqual(patched_check.call_count, 6)
+        patched_check.assert_called_with(database=['default'])
+
+```
+
+notice the:
+```
+    @patch('time.sleep')
+    def test_wait_for_db_delay(self, patched_sleep, patched_check):
+```
+
+`patched_sleep` in this case is the first argument after `self` and it takes from `@patch('time.sleep')` and `patched_check` argument is the second argument after `self` and it takes after `@patch('core.management.commands.wait_for_db.Command.check')` meaning the patch operations work on an inside-out order
+
+To run the custom created `wait_for_db` command:
+
+```
+docker-compose run --rm  app sh -c "python manage.py wait_for_db"
+```
+
+To ignore warning/errors due to flake8 linting, we can add the following command inside a python file:
+```
+# noqa 
+```
+
+### Models
+- Each model maps to a table
+- Models contain
+  - Name
+  - Fields
+  - Other metadata
+  - Custom Python logic
+
+### Creating migrations
+- Ensure app is enabled in settings.py
+- Use Django CLI
+  - `python manage.py makemigrations` (command that is used to create migrations)
+
+### Applying migrations
+- Use Django CLI
+  - `python manage.py migrate` (command that is used to apply migrations)
+  - run the command anytime we start the application after waiting for the database (run `wait_for_db` command first and then run the migrations command)
+
+Note: if we run into an issue with the following message:
+
+```
+PostgreSQL Database directory appears to contain a database; Skipping initialization
+```
+
+we need to run:
+```
+docker-compose down --volumes
+```
+
+left it at: Update docker compose and CI/CD at 2:45 
+
+### Building using docker-compose
+```
+docker-compose up -d --build
+```
+
+### To find out what services are running on a specific port:
+```
+sudo lsof -i :5432
+```
+
+To stop a specific service:
+```
+sudo kill <PID>
+```
+
+app_1  |        Is the server running on host "db" (172.18.0.2) and accepting
+app_1  |        TCP/IP connections on port 5432?
+
+Note: Restart Docker service
+```
+sudo systemctl restart docker.service
+```
